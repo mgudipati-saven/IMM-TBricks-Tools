@@ -64,15 +64,12 @@ if infile && File.exist?(infile)
   xml = Builder::XmlMarkup.new(:target=>f, :indent=>2)
   xml.instruct!
   etfs.each do |key, value|
-    totalshr = key[124..135].to_f
     xml.etf("short_name"=>key[2..16].strip) {
       xml.parameter("name"=>"netassetvalue", "vlaue"=>key[82..94].to_f)
       xml.basket("short_name"=>"#{key[2..16].strip} Basket") {
         xml.legs {
           value.each do |comp|
-            compshr = comp[37..44].to_f
-            ratio = (totalshr == 0) ? 0 : compshr/totalshr
-            xml.leg("short_name"=>comp[2..16].strip, "mic"=>"BATS", "ratio"=>(sprintf "%.8f", ratio))
+            xml.leg("short_name"=>comp[2..16].strip, "mic"=>"BATS", "ratio"=>comp[37..44].to_f)
           end
         }
       }
