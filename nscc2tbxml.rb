@@ -64,12 +64,28 @@ if infile && File.exist?(infile)
   xml = Builder::XmlMarkup.new(:target=>f, :indent=>2)
   xml.instruct!
   etfs.each do |key, value|
+    #Create/Redeem Units per Trade
+    cunit = key[45..52].to_i
     xml.etf("short_name"=>key[2..16].strip) {
-      xml.parameter("name"=>"netassetvalue", "vlaue"=>key[82..94].to_f)
+      #Total Cash Amount Per Creation Unit...99,999,999,999.99-
+      cashamt = "#{key[110..120]}.#{key[121..122]}".to_f
+      sign = key[123]
+      if sign == '-' then cashamt *= -1 end
+      
+      #Net Asset Value Per Creation Unit...99,999,999,999.99
+      nav = "#{key[82..92]}.#{key[93..94]}".to_f
+      sign = key[95]
+      if sign == '-' then nav *= -1 end
+
+      nav = cashamt/cunit
+      xml.parameter("name"=>"netassetvalue", "vlaue"=>sprintf("%.2f", nav))
       xml.basket("short_name"=>"#{key[2..16].strip} Basket") {
         xml.legs {
           value.each do |comp|
-            xml.leg("short_name"=>comp[2..16].strip, "mic"=>"BATS", "ratio"=>comp[37..44].to_f)
+            #Component Share Qty
+            qty = comp[37..44].to_f
+            ratio = qty/cunit
+            xml.leg("short_name"=>comp[2..16].strip, "mic"=>"BATS", "ratio"=>sprintf("%.4f", ratio))
           end
         }
       }

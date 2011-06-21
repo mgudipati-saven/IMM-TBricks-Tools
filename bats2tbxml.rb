@@ -9,7 +9,7 @@ unless ARGV.length >= 1
 end  
   
 infile = ''
-outfile = "bats-instr.xml"  
+outfile = "bats-instruments.xml"  
 # specify the options we accept and initialize the option parser  
 opts = GetoptLong.new(  
   [ "--infile", "-i", GetoptLong::REQUIRED_ARGUMENT ],  
