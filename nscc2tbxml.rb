@@ -1,7 +1,10 @@
 require 'csv'
 require 'builder'
 require 'getoptlong'  
-  
+
+# global symbol list
+symlist = Hash.new
+
 # call using "ruby nscc2tbxml.rb -i<input file>"  
 unless ARGV.length == 1
   puts "Usage: ruby nscc2tbxml.rb -i<input file>" 
@@ -49,7 +52,10 @@ if infile && File.exist?(infile)
           xml.identifiers {
             xml.identifier("venue"=>"c0c78852-efd6-11de-9fb8-dfdb5824b38d", "mic"=>"XXXX") {
               xml.fields {
-                xml.field("name"=>"symbol", "value"=>key[2..16].strip)
+                #Component Symbol...Trading Symbol
+                sym = key[2..16].strip
+                symlist[sym] = sym
+                xml.field("name"=>"symbol", "value"=>sym)
               }
             }
           }
@@ -92,6 +98,42 @@ if infile && File.exist?(infile)
         }
       } 
     end
+  }
+  f.close
+
+  # build the instrument reference data xml
+  f = File.new('instruments.xml', "w")
+  xml = Builder::XmlMarkup.new(:target=>f, :indent=>2)
+  xml.instruct!
+  xml.resource("name"=>"instruments", "type"=>"application/x-instrument-reference-data+xml") {
+    xml.instruments {
+      symlist.sort.each do |key, value|
+        xml.instrument("short_name"=>key, "mnemonic"=>key, "precedence"=>"no", "cfi"=>"ESNTFR", "price_format"=>"decimal 2", "deleted"=>"no") {
+          xml.xml("type"=>"fixml")
+          xml.groups
+          xml.identifiers {
+            xml.identifier("venue"=>"7c15c3c2-4a25-11e0-b2a1-2a7689193271", "mic"=>"BATS") {
+              xml.fields {
+                xml.field("name"=>"exdestination", "value"=>"BATS")
+                xml.field("name"=>"symbol", "value"=>key)
+              }
+            }
+            xml.identifier("venue"=>"7c15c3c2-4a25-11e0-b2a1-2a7689193271", "mic"=>"EDGA") {
+              xml.fields {
+                xml.field("name"=>"exdestination", "value"=>"EDGA")
+                xml.field("name"=>"symbol", "value"=>key)
+              }
+            }
+            xml.identifier("venue"=>"7c15c3c2-4a25-11e0-b2a1-2a7689193271", "mic"=>"EDGX") {
+              xml.fields {
+                xml.field("name"=>"exdestination", "value"=>"EDGX")
+                xml.field("name"=>"symbol", "value"=>key)
+              }
+            }
+          }
+        }
+    	end
+    }
   }
   f.close
 else
