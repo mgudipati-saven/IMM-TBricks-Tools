@@ -1,10 +1,11 @@
+#!/usr/bin/env ruby
+
 require 'csv'
 require 'builder'
 require 'getoptlong'  
 
   # Security
   class Security
-  
     attr_accessor( :tickerSymbol )
     attr_accessor( :companyName )
   
@@ -49,9 +50,6 @@ require 'getoptlong'
     end  
   end
   
-# global symbol list
-symlist = Hash.new
-
 # call using "ruby nscc2tbxml.rb -i<input file>"  
 unless ARGV.length == 1
   puts "Usage: ruby nscc2tbxml.rb -i<input file>" 
@@ -110,23 +108,39 @@ if infile && File.exist?(infile)
     end
   end
 
-  # build the stub basket instrument xml file
+  # build the stub basket instruments xml file
+  #<?xml version="1.0" encoding="UTF-8"?>
+  #<resource name="instruments" type="application/x-instrument-reference-data+xml">
+  #  <instruments>
+  #    <instrument short_name="EDZ Basket" long_name="" mnemonic="" precedence="yes" cfi="ESXXXX" price_format="decimal 2" deleted="no">
+  #      <xml type="fixml"/>
+  #      <groups/>
+  #      <identifiers>
+  #        <identifier venue="c0c78852-efd6-11de-9fb8-dfdb5824b38d" mic="XXXX">
+  #          <fields>
+  #            <field name="symbol" value="EDZ"/>
+  #          </fields>
+  #        </identifier>
+  #      </identifiers>
+  #    </instrument>
+  #    ...
+  #    ...
+  #  </instruments>
+  #</resource>
   f = File.new("stub-basket-instruments.xml", "w")
   xml = Builder::XmlMarkup.new(:target=>f, :indent=>2)
   xml.instruct!
   xml.resource("name"=>"instruments", "type"=>"application/x-instrument-reference-data+xml") {
     xml.instruments {
-      etfs.each_key do |key|
-        xml.instrument("short_name"=>"#{key[2..16].strip} Basket", "long_name"=>"", "mnemonic"=>"", "precedence"=>"yes", "cfi"=>"ESXXXX", "price_format"=>"decimal 2", "deleted"=>"no") {
+      #etfs.each_key do |key|
+      baskets.each do |aBasket|
+        xml.instrument("short_name"=>"#{aBasket.tickerSymbol} Basket", "long_name"=>"", "mnemonic"=>"", "precedence"=>"yes", "cfi"=>"ESXXXX", "price_format"=>"decimal 2", "deleted"=>"no") {
           xml.xml("type"=>"fixml")
           xml.groups
           xml.identifiers {
             xml.identifier("venue"=>"c0c78852-efd6-11de-9fb8-dfdb5824b38d", "mic"=>"XXXX") {
               xml.fields {
-                #Component Symbol...Trading Symbol
-                sym = key[2..16].strip
-                symlist[sym] = sym
-                xml.field("name"=>"symbol", "value"=>sym)
+                xml.field("name"=>"symbol", "value"=>aBasket.tickerSymbol)
               }
             }
           }
@@ -136,34 +150,38 @@ if infile && File.exist?(infile)
   }
   f.close
   
-  # build the etf components xml file
+  # build the basket components xml file
+  #  
+  #<?xml version="1.0" encoding="UTF-8"?>
+  #<instruments>
+  #  <etf short_name="WREI">
+  #    <parameter name="netassetvalue" value="0.10"/>
+  #    <basket short_name="WREI Basket">
+  #      <legs>
+  #        <leg short_name="AMB" mic="BATS" ratio="0.0165"/>
+  #        <leg short_name="AKR" mic="BATS" ratio="0.0039"/>
+  #        ...
+  #        ...
+  #      </legs>
+  #    </basket>
+  #  </etf>
+  #</instruments>  
   f = File.new("basket-components.xml", "w")
   xml = Builder::XmlMarkup.new(:target=>f, :indent=>2)
   xml.instruct!
   xml.instruments {
-    etfs.each do |key, value|
-      #Create/Redeem Units per Trade
-      cunit = key[45..52].to_i
-      xml.etf("short_name"=>key[2..16].strip) {
-        #Total Cash Amount Per Creation Unit...99,999,999,999.99-
-        cashamt = "#{key[110..120]}.#{key[121..122]}".to_f
-        sign = key[123]
-        if sign == '-' then cashamt *= -1 end
-      
-        #Net Asset Value Per Creation Unit...99,999,999,999.99
-        nav = "#{key[82..92]}.#{key[93..94]}".to_f
-        sign = key[95]
-        if sign == '-' then nav *= -1 end
-
-        nav = cashamt/cunit
-        xml.parameter("name"=>"netassetvalue", "value"=>sprintf("%.2f", nav))
-        xml.basket("short_name"=>"#{key[2..16].strip} Basket") {
+    #etfs.each do |key, value|
+    baskets.each do |aBasket|
+      xml.etf("short_name"=>aBasket.tickerSymbol) {
+        # NAV defined by Michael R. Conners...totalCashAmount/creationUnit
+        nav = aBasket.totalCashAmount/aBasket.creationUnit
+        xml.parameter("name"=>"netassetvalue", "value"=>sprintf("%.4f", nav))
+        xml.basket("short_name"=>"#{aBasket.tickerSymbol} Basket") {
           xml.legs {
-            value.each do |comp|
-              #Component Share Qty
-              qty = comp[37..44].to_f
-              ratio = qty/cunit
-              xml.leg("short_name"=>comp[2..16].strip, "mic"=>"BATS", "ratio"=>sprintf("%.4f", ratio))
+            aBasket.components.each do |aComponent|
+              # Ratio defined by Michael R. Conners...shareQuantity/creationUnit
+              ratio = aComponent.shareQuantity/aBasket.creationUnit
+              xml.leg("short_name"=>aComponent.tickerSymbol, "mic"=>"BATS", "ratio"=>sprintf("%.4f", ratio))
             end
           }
         }
@@ -171,42 +189,14 @@ if infile && File.exist?(infile)
     end
   }
   f.close
-
-  # build the instrument reference data xml
-  f = File.new('instruments.xml', "w")
-  xml = Builder::XmlMarkup.new(:target=>f, :indent=>2)
-  xml.instruct!
-  xml.resource("name"=>"instruments", "type"=>"application/x-instrument-reference-data+xml") {
-    xml.instruments {
-      symlist.sort.each do |key, value|
-        xml.instrument("short_name"=>key, "mnemonic"=>key, "precedence"=>"no", "cfi"=>"ESNTFR", "price_format"=>"decimal 2", "deleted"=>"no") {
-          xml.xml("type"=>"fixml")
-          xml.groups
-          xml.identifiers {
-            xml.identifier("venue"=>"7c15c3c2-4a25-11e0-b2a1-2a7689193271", "mic"=>"BATS") {
-              xml.fields {
-                xml.field("name"=>"exdestination", "value"=>"BATS")
-                xml.field("name"=>"symbol", "value"=>key)
-              }
-            }
-            xml.identifier("venue"=>"7c15c3c2-4a25-11e0-b2a1-2a7689193271", "mic"=>"EDGA") {
-              xml.fields {
-                xml.field("name"=>"exdestination", "value"=>"EDGA")
-                xml.field("name"=>"symbol", "value"=>key)
-              }
-            }
-            xml.identifier("venue"=>"7c15c3c2-4a25-11e0-b2a1-2a7689193271", "mic"=>"EDGX") {
-              xml.fields {
-                xml.field("name"=>"exdestination", "value"=>"EDGX")
-                xml.field("name"=>"symbol", "value"=>key)
-              }
-            }
-          }
-        }
-    	end
-    }
-  }
-  f.close
 else
   puts "File not found #{infile}"
 end # if File.exist?(infile)
+
+=begin rdoc
+ * Name: nscc2tbxml.rb
+ * Description: Converts DTCC file into TBricks xml files.
+ * Author: Murthy Gudipati
+ * Date: 26-Jun-2011
+ * License: Saven Technologies Inc.
+=end
