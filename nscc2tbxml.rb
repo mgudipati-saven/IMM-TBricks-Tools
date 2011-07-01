@@ -2,54 +2,9 @@
 
 require 'csv'
 require 'builder'
-require 'getoptlong'  
+require 'getoptlong'
+require_relative 'common'
 
-  # Security
-  class Security
-    attr_accessor( :tickerSymbol )
-    attr_accessor( :companyName )
-  
-    def initialize( aSymbol )
-      @tickerSymbol = aSymbol
-    end  
-  end
-  
-  # Basket
-  class Basket
-    #Index Receipt Symbol...Trading Symbol
-    attr_accessor( :tickerSymbol )
-
-    #Create/Redeem Units per Trade
-    attr_accessor( :creationUnit )
-  
-    #Total Cash Amount Per Creation Unit...99,999,999,999.99-
-    attr_accessor( :totalCashAmount )
-  
-    #Net Asset Value Per Creation Unit...99,999,999,999.99
-    attr_accessor( :nav )
-  
-    #Components...
-    attr_accessor( :components )
-
-    def initialize( aSymbol )
-      @tickerSymbol = aSymbol
-      @components = Array.new
-    end  
-  end
-
-  # Basket Component
-  class BasketComponent
-    #Component Symbol...Trading Symbol
-    attr_accessor( :tickerSymbol )
-    
-    #Component Share Qty...99,999,999
-    attr_accessor( :shareQuantity )
-    
-    def initialize( aSymbol )
-      @tickerSymbol = aSymbol
-    end  
-  end
-  
 # call using "ruby nscc2tbxml.rb -i<input file>"  
 unless ARGV.length == 1
   puts "Usage: ruby nscc2tbxml.rb -i<input file>" 
