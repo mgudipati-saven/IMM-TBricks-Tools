@@ -144,7 +144,8 @@ def create_tbricks_instruments_xml(outfile, securities)
         if short_name == nil then short_name = aSecurity.name end
         if short_name == nil then short_name = aSecurity.tickerSymbol end
         
-        xml.instrument( "short_name"=>short_name, 
+        # to be consistent with baskets xml definition, ticker symbol is used for short_name
+        xml.instrument( "short_name"=>aSecurity.tickerSymbol, 
                         "long_name"=>aSecurity.name,
                         "mnemonic"=>aSecurity.tickerSymbol, 
                         "precedence"=>"no", 
