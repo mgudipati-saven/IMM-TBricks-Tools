@@ -25,18 +25,9 @@ opts.each do |opt, arg|
   end  
 end
 
-# Process the NSCC basket composition file
-# NSCC file layout is defined as:
-# Header record describing the basket information
-# Basket component records
-# => 01WREI           18383M47200220110624000000950005000000000000000291+0000000000000+0000162471058+0000000003249+0000000004503+0000005000000000000000000+
-# => 02AKR            0042391090002011062400000193WREI           18383M472002
-# => 02ALX            0147521090002011062400000013WREI           18383M472002
-# => ...
 baskets = Array.new
 if infile && File.exist?(infile)
-  nscc = NSCC.new(infile)
-  baskets = nscc.baskets
+  baskets = parse_nscc_basket_composition_file(infile)
 else
   puts "File not found #{infile}"
 end # if File.exist?(infile)
