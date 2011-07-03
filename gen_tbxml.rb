@@ -1,5 +1,6 @@
 require 'inifile'
 require 'csv'
+require 'builder'
 require_relative 'common'
 
 # Read the INI file
@@ -11,8 +12,20 @@ in_params = ini_file['Input']
 # Comma separated list of xignite files
 xfiles = in_params['XigniteFiles']
 
+# NSCC basket composition file
+nscc_file = in_params['NSCCFile'].strip
+
 # Output parameters
 out_params = ini_file['Output']
+
+# Instrument Reference Data XML
+instrument_reference_data_file = out_params['InstrumentReferenceData'].strip
+
+# Basket Stub Instruments XML
+basket_stub_instruments_file = out_params['BasketStubInstruments'].strip
+
+# Basket Components XML
+basket_components_file = out_params['BasketComponents'].strip
 
 # Process all the xignite master securities files
 securities_by_ticker = Hash.new
@@ -39,7 +52,19 @@ xfiles.split(',').each do |aFile|
   end # if File.exist?(aFile)
 end # for each aFile  
 
-p securities_by_ticker
-p securities_by_cusip
-puts "Num securities in ticker map: #{securities_by_ticker.length}"
-puts "Num securities in cusip map: #{securities_by_cusip.length}"
+# build the tbricks instruments xml file
+create_tbricks_instruments_xml(instrument_reference_data_file, securities_by_ticker.values)
+
+# Process NSCC file
+baskets = Array.new
+if nscc_file && File.exist?(nscc_file)
+  baskets = parse_nscc_basket_composition_file(nscc_file)
+else
+  puts "File not found #{nscc_file}"
+end # if File.exist?(nscc_file)
+
+# build the stub basket instruments xml file
+create_stub_basket_instruments_xml(basket_stub_instruments_file, baskets)
+
+# build the basket components xml file
+create_basket_components_xml(basket_components_file, baskets)
