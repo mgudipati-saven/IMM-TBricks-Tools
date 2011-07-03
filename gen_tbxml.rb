@@ -14,45 +14,32 @@ xfiles = in_params['XigniteFiles']
 # Output parameters
 out_params = ini_file['Output']
 
-# Process the xignite master securities files
-# Xignite master securities file layout is defined as:
-# => " Exchange"," Count"," Records Record Symbol"," Records Record CUSIP"," Records Record CIK"," Records Record ISIN"," Records Record SEDOL"," Records Record Valoren"," Records Record Exchange"," Records Record Name"," Records Record ShortName"," Records Record Issue"," Records Record Sector"," Records Record Industry"," Records Record LastUpdateDate",
-# => For e.g. NYSE,3581,A,00846U101,0001090872,US00846U1016,2520153,901692,NYSE,"Agilent Technologies Inc.","Agilent Tech Inc","Common Stock",TECHNOLOGY,"Scientific & Technical Instruments",12/3/2005,
+# Process all the xignite master securities files
 securities_by_ticker = Hash.new
 securities_by_cusip = Hash.new
 
 xfiles.split(',').each do |aFile|
-  if aFile && File.exist?(aFile.strip)
-  	CSV.foreach(aFile.strip, :quote_char => '"', :col_sep =>',', :row_sep => :auto, :headers => true) do |row|
-      sym = row.field(' Records Record Symbol')
-      if sym != nil then
-        # create a new security by passing the ticker symbol as argument
-        security = Security.new(sym)
-
-        # populate the attributes
-        security.cusip = row.field(' Records Record CUSIP')
-        security.cik = row.field(' Records Record CIK')
-        security.isin = row.field(' Records Record ISIN')
-        security.sedol = row.field(' Records Record SEDOL')
-        security.valoren = row.field(' Records Record Valoren')
-        security.exchange = row.field(' Records Record Exchange')
-        security.name = row.field(' Records Record Name')
-        security.shortName = row.field(' Records Record ShortName')
-        security.issue = row.field(' Records Record Issue')
-        security.sector = row.field(' Records Record Sector')
-        security.industry = row.field(' Records Record Industry')
-        
-        # save in ticker map
-        securities_by_ticker[sym] = security
-        
-        # save in cusip map
-        if security.cusip != nil then securities_by_cusip[security.cusip] = security end
+  aFile = aFile.strip
+  if aFile && File.exist?(aFile)
+    securities = parse_xignite_master_securities_file(aFile)
+    
+    securities.each do |aSecurity|
+      # create a map keyed by ticker symbol
+      if aSecurity.tickerSymbol != nil
+        securities_by_ticker[aSecurity.tickerSymbol] = aSecurity
       end
-  	end # CSV.foreach
+
+      # create a map keyed by cusip
+      if aSecurity.cusip != nil
+        securities_by_cusip[aSecurity.cusip] = aSecurity
+      end
+    end
   else
     puts "File not found #{aFile}"
   end # if File.exist?(aFile)
 end # for each aFile  
 
+p securities_by_ticker
+p securities_by_cusip
 puts "Num securities in ticker map: #{securities_by_ticker.length}"
 puts "Num securities in cusip map: #{securities_by_cusip.length}"

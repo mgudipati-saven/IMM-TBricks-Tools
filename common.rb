@@ -264,3 +264,37 @@ def create_basket_components_xml(outfile, baskets)
   }
   f.close
 end
+
+# Process the xignite master securities file
+# Xignite master securities file layout is defined as follows:
+# => " Exchange"," Count"," Records Record Symbol"," Records Record CUSIP"," Records Record CIK"," Records Record ISIN"," Records Record SEDOL"," Records Record Valoren"," Records Record Exchange"," Records Record Name"," Records Record ShortName"," Records Record Issue"," Records Record Sector"," Records Record Industry"," Records Record LastUpdateDate",
+# => For e.g. NYSE,3581,A,00846U101,0001090872,US00846U1016,2520153,901692,NYSE,"Agilent Technologies Inc.","Agilent Tech Inc","Common Stock",TECHNOLOGY,"Scientific & Technical Instruments",12/3/2005,
+def parse_xignite_master_securities_file( aFile )
+  securities = Array.new
+  
+  CSV.foreach(aFile, :quote_char => '"', :col_sep =>',', :row_sep => :auto, :headers => true) do |row|
+    sym = row.field(' Records Record Symbol')
+    if sym != nil then
+      # create a new security by passing the ticker symbol as argument
+      security = Security.new(sym)
+
+      # populate the attributes
+      security.cusip = row.field(' Records Record CUSIP')
+      security.cik = row.field(' Records Record CIK')
+      security.isin = row.field(' Records Record ISIN')
+      security.sedol = row.field(' Records Record SEDOL')
+      security.valoren = row.field(' Records Record Valoren')
+      security.exchange = row.field(' Records Record Exchange')
+      security.name = row.field(' Records Record Name')
+      security.shortName = row.field(' Records Record ShortName')
+      security.issue = row.field(' Records Record Issue')
+      security.sector = row.field(' Records Record Sector')
+      security.industry = row.field(' Records Record Industry')
+
+      # push it to the securities list
+      securities.push(security)
+    end
+  end # CSV.foreach
+  
+  return securities
+end
