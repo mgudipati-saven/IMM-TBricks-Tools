@@ -32,11 +32,20 @@ else
   puts "File not found #{infile}"
 end # if File.exist?(infile)
 
-# build the stub basket instruments xml file
+# build the tbricks stub basket instruments xml file
 create_stub_basket_instruments_xml("stub-basket-instruments.xml", baskets)
 
-# build the basket components xml file
+# build the tbricks basket components xml file
 create_basket_components_xml("basket-components.xml", baskets)
+
+# build the tbricks instruments xml file from the basket components
+securities = Hash.new
+baskets.each do |aBasket|
+  aBasket.components.each do |aComponent|
+    securities[aComponent.tickerSymbol] = aComponent
+  end
+end
+create_tbricks_instruments_xml("instruments.xml", securities.values)
 
 =begin rdoc
  * Name: nscc2tbxml.rb

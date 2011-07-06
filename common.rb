@@ -45,16 +45,9 @@ class Basket
 end
 
 # Basket Component
-class BasketComponent
-  #Component Symbol...Trading Symbol
-  attr_accessor( :tickerSymbol )
-  
+class BasketComponent < Security
   #Component Share Qty...99,999,999
   attr_accessor( :shareQuantity )
-  
-  def initialize( aSymbol )
-    @tickerSymbol = aSymbol
-  end  
 end
 
 # Process the NSCC basket composition file
@@ -93,7 +86,7 @@ def parse_nscc_basket_composition_file( aFile )
       when '02'
         # basket component symbol...Trading Symbol
         sym = line[2..16].strip
-        if sym != ''
+        if sym != '' # skipping the components with blank symbol
           aComponent = BasketComponent.new(sym)
 
           #Component Share Qty...99,999,999
