@@ -44,12 +44,21 @@ $redisdb.select 0
 # Value => Sorted set of components as json objects {(Ticker, CUSIP, ShareQuantity), (...), ...}
 if infile && File.exist?(infile)
   bticker = nil
+  arr = nil
   IO.foreach(infile) do |line| 
     case line[0..1]
       when '01' # basket header record
+        if bticker != nil
+  	      # store the basket components
+  	      json = JSON.generate arr
+  	      $redisdb.hset "DTCC:BASKET:#{bticker}",
+                        "Components", json
+        end
+                                    
         #Index Receipt Symbol...Trading Symbol
         bticker = line[2..16].strip
-
+        arr = Array.new
+        
         #Create/Redeem Units per Trade
         cunit = line[45..52].to_i
 
@@ -83,9 +92,10 @@ if infile && File.exist?(infile)
           #Component Share Qty...99,999,999
           hash['ShareQuantity '] = score = line[37..44].to_f
 
+          arr.push(hash)
           # store it in a sorted set of basket components
-  	      json = JSON.generate hash
-  	      $redisdb.zadd "DTCC:BASKET:COMPONENTS:#{bticker}", score, json
+  	      #json = JSON.generate hash
+  	      #$redisdb.zadd "DTCC:BASKET:COMPONENTS:#{bticker}", score, json
         end
     end
   end
