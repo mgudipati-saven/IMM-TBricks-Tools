@@ -27,6 +27,7 @@ $redisdb = Redis.new
 $redisdb.select 0
 
 # Process the DTCC basket composition file
+# 
 # DTCC file layout is defined as follows:
 # Header record describing the basket information
 # => 01WREI           18383M47200220110624000000950005000000000000000291+0000000000000+0000162471058+0000000003249+0000000004503+0000005000000000000000000+
@@ -34,6 +35,13 @@ $redisdb.select 0
 # => 02AKR            0042391090002011062400000193WREI           18383M472002
 # => 02ALX            0147521090002011062400000013WREI           18383M472002
 # => ...
+# 
+# Redis layout is as follows:
+# Key => DTCC:BASKET:#{BasketTickerSymbol}
+# Value => Hashtable {"IndexReceiptSymbol", "CreationUnit", etc...}
+#
+# Key => DTCC:BASKET:COMPONENTS:#{BasketTickerSymbol}
+# Value => Sorted set of components as json objects {(Ticker, CUSIP, ShareQuantity), (...), ...}
 if infile && File.exist?(infile)
   bticker = nil
   IO.foreach(infile) do |line| 
@@ -73,11 +81,11 @@ if infile && File.exist?(infile)
           hash['CUSIP'] = line[17..25].strip
 
           #Component Share Qty...99,999,999
-          hash['ShareQuantity '] = line[37..44].to_f
+          hash['ShareQuantity '] = score = line[37..44].to_f
 
           # store it in a sorted set of basket components
   	      json = JSON.generate hash
-  	      $redisdb.zadd "DTCC:BASKET:COMPONENTS:#{bticker}", 0, json
+  	      $redisdb.zadd "DTCC:BASKET:COMPONENTS:#{bticker}", score, json
         end
     end
   end
