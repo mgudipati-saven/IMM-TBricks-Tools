@@ -38,10 +38,8 @@ $redisdb.select 0
 # 
 # Redis layout is as follows:
 # Key => DTCC:BASKET:#{BasketTickerSymbol}
-# Value => Hashtable {"IndexReceiptSymbol", "CreationUnit", etc...}
+# Value => Hashtable {"IndexReceiptSymbol" => "SPY", "CreationUnit" => "50000", "Components" => json object(array of hashes)}
 #
-# Key => DTCC:BASKET:COMPONENTS:#{BasketTickerSymbol}
-# Value => Sorted set of components as json objects {(Ticker, CUSIP, ShareQuantity), (...), ...}
 if infile && File.exist?(infile)
   bticker = nil
   arr = nil

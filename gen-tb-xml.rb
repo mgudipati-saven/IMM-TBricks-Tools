@@ -71,3 +71,4 @@ create_stub_basket_instruments_xml(basket_stub_instruments_file, baskets)
 
 # build the basket components xml file
 create_basket_components_xml(basket_components_file, baskets)
+
