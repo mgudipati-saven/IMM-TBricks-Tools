@@ -28,6 +28,7 @@ end
 baskets = Array.new
 if infile && File.exist?(infile)
   baskets = parse_nscc_basket_composition_file(infile)
+  puts "Basket count => #{baskets.length}"
 else
   puts "File not found #{infile}"
 end # if File.exist?(infile)
@@ -41,6 +42,7 @@ create_basket_components_xml("basket-components.xml", baskets)
 # build the tbricks instruments xml file from the basket components
 securities = Hash.new
 baskets.each do |aBasket|
+  securities[aBasket.tickerSymbol] = aBasket
   aBasket.components.each do |aComponent|
     securities[aComponent.tickerSymbol] = aComponent
   end

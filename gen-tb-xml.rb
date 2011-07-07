@@ -9,6 +9,9 @@ ini_file = IniFile.load('tbxml.ini')
 # Input parameters
 in_params = ini_file['Input']
 
+# Source of data - redis or files
+src = in_params['Source']
+
 # Comma separated list of xignite files
 xfiles = in_params['XigniteFiles']
 

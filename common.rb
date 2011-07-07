@@ -22,10 +22,7 @@ class Security
 end
 
 # Basket
-class Basket
-  #Index Receipt Symbol...Trading Symbol
-  attr_accessor( :tickerSymbol )
-
+class Basket < Security
   #Create/Redeem Units per Trade
   attr_accessor( :creationUnit )
 
@@ -60,15 +57,21 @@ end
 # => ...
 def parse_nscc_basket_composition_file( aFile )
   baskets = Array.new
-  aBasket = ''
-
+  aBasket = nil
+  dirty = false
+  
   IO.foreach(aFile) do |line| 
     case line[0..1]
       when '01' # basket header type record
-        # new basket
+        # new basket...save the old basket if it is not dirty
+        if aBasket != nil && !dirty
+          baskets.push(aBasket)
+        end
+
         #Index Receipt Symbol...Trading Symbol
         aBasket = Basket.new(line[2..16].strip)
-
+        dirty = false
+        
         #Create/Redeem Units per Trade
         aBasket.creationUnit = line[45..52].to_i
 
@@ -81,19 +84,20 @@ def parse_nscc_basket_composition_file( aFile )
         aBasket.nav = "#{line[82..92]}.#{line[93..94]}".to_f
         sign = line[95]
         if sign == '-' then aBasket.nav *= -1 end
-
-        baskets.push(aBasket)        
       when '02'
         # basket component symbol...Trading Symbol
         sym = line[2..16].strip
-        if sym != '' # skipping the components with blank symbol
-          aComponent = BasketComponent.new(sym)
-
-          #Component Share Qty...99,999,999
-          aComponent.shareQuantity = line[37..44].to_f
-
-          aBasket.components.push(aComponent)
+        if sym == ''
+          # mark components with blank symbol as dirty baskets
+          dirty = true
         end
+
+        aComponent = BasketComponent.new(sym)
+
+        #Component Share Qty...99,999,999
+        aComponent.shareQuantity = line[37..44].to_f
+
+        aBasket.components.push(aComponent)
     end
   end
   
