@@ -47,6 +47,39 @@ class BasketComponent < Security
   attr_accessor( :shareQuantity )
 end
 
+# Process the symbol list file
+# Symbol list file layout is defined as follows:
+# Header record:
+# => CUSIP,Symbol,Ext,Company Name,Primary Market,Round Lot Size,Min Order Qty
+#
+# Data record:
+# => 00846U101,A,,AGILENT TECHNOLOGIES INC,NYSE,100,0
+# 
+def parse_symbol_list_file( aFile )
+  securities = Array.new
+  
+  CSV.foreach(aFile, :quote_char => '"', :col_sep =>',', :row_sep => :auto, :headers => true) do |row|
+    symbol = row.field('Symbol')
+    ext = row.field('Ext')
+    if ext != '' then symbol += ".#{ext}" end
+  
+    if symbol != '' then
+      # create a new security by passing the ticker symbol as argument
+      security = Security.new(symbol)
+
+      # populate the attributes
+      security.cusip = row.field('CUSIP')
+      security.exchange = row.field('Primary Market')
+      security.name = row.field('Company Name')
+
+      # push it to the securities list
+      securities.push(security)
+    end
+  end # CSV.foreach
+  
+  return securities
+end
+
 # Process the NSCC basket composition file
 # NSCC file layout is defined as follows:
 # Header record describing the basket information
