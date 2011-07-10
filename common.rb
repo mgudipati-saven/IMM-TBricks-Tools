@@ -47,6 +47,7 @@ class BasketComponent < Security
   attr_accessor( :shareQuantity )
 end
 
+#
 # Process the symbol list file
 # Symbol list file layout is defined as follows:
 # Header record:
@@ -71,6 +72,40 @@ def parse_symbol_list_file( aFile )
       security.cusip = row.field('CUSIP')
       security.exchange = row.field('Primary Market')
       security.name = row.field('Company Name')
+
+      # push it to the securities list
+      securities.push(security)
+    end
+  end # CSV.foreach
+  
+  return securities
+end
+
+#
+# Process the nyse group symbol file
+# Symbol file layout is defined as follows:
+# Header record:
+# => Symbol,CUSIP,CompanyName,NYSEGroupMarket,PrimaryMarket,IndustryCode,SuperSectorCode,SectorCode,SubSectorCode,IndustryName,SuperSectorName,SectorName,SubSectorName
+#
+# Data record:
+# => AA,13817101,"ALCOA, INC",N,N,1000,1700,1750,1753,Basic Materials,Basic Resources,Industrial Metals & Mining,Aluminum
+# 
+def parse_nyse_grp_sym_file( aFile )
+  securities = Array.new
+  
+  CSV.foreach(aFile, :quote_char => '"', :col_sep =>',', :row_sep => :auto, :headers => true) do |row|
+    symbol = row.field('Symbol')
+    if symbol != nil then
+      # Symbology conversion...BRK A => BRK.A
+      symbol = symbol.sub(" ", ".")
+
+      # create a new security by passing the ticker symbol as argument
+      security = Security.new(symbol)
+
+      # populate the attributes
+      security.cusip = row.field('CUSIP').rjust(9, '0')
+      security.exchange = row.field('PrimaryMarket')
+      security.name = row.field('CompanyName')
 
       # push it to the securities list
       securities.push(security)
