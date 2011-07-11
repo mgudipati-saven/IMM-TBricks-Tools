@@ -28,7 +28,7 @@ end
 baskets = Array.new
 if infile && File.exist?(infile)
   baskets = parse_nscc_basket_composition_file(infile)
-  puts "Basket count => #{baskets.length}"
+  #puts "Basket count => #{baskets.length}"
 else
   puts "File not found #{infile}"
 end # if File.exist?(infile)

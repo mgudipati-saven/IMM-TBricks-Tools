@@ -46,6 +46,8 @@ if infile && File.exist?(infile)
     symbol = row.field('Symbol')
     cusip = row.field('CUSIP').rjust(9, '0')
     if symbol != nil then
+      # Symbology conversion...BRK A => BRK.A
+      symbol = symbol.sub(" ", ".")
       $redisdb.hmset  "NYSEGRP:SECURITIES:BYTICKER:#{symbol}",
         "TickerSymbol", symbol,
         "CUSIP", cusip,

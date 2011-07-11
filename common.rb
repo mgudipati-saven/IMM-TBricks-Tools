@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
+require 'csv'
+require 'builder'
 
 # Security
 class Security
@@ -131,8 +133,8 @@ def parse_nscc_basket_composition_file( aFile )
   IO.foreach(aFile) do |line| 
     case line[0..1]
       when '01' # basket header type record
-        # new basket...save the old basket if it is not dirty
-        if aBasket != nil && !dirty
+        # new basket...save the old basket #if it is not dirty
+        if aBasket != nil #&& !dirty
           baskets.push(aBasket)
         end
 
@@ -140,6 +142,9 @@ def parse_nscc_basket_composition_file( aFile )
         aBasket = Basket.new(line[2..16].strip)
         dirty = false
         
+        #Index Receipt CUSIP...S&P assigned CUSIP
+        aBasket.cusip = line[17..25].strip
+
         #Create/Redeem Units per Trade
         aBasket.creationUnit = line[45..52].to_i
 
@@ -161,6 +166,9 @@ def parse_nscc_basket_composition_file( aFile )
         end
 
         aComponent = BasketComponent.new(sym)
+
+        # Component CUSIP...S&P assigned CUSIP
+        aComponent.cusip = line[17..25].strip
 
         #Component Share Qty...99,999,999
         aComponent.shareQuantity = line[37..44].to_f
