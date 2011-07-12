@@ -25,16 +25,20 @@ end
 
 # Basket
 class Basket < Security
-  #Create/Redeem Units per Trade
-  attr_accessor( :creationUnit )
-
-  #Total Cash Amount Per Creation Unit...99,999,999,999.99-
+  attr_accessor( :whenIssuedIndicator )
+  attr_accessor( :foreignIndicator )
+  attr_accessor( :exchangeIndicator )
+  attr_accessor( :tradeDate )
+  attr_accessor( :componentCount )
+  attr_accessor( :creationUnitsPerTrade )
+  attr_accessor( :estimatedT1CashAmountPerCreationUnit )
+  attr_accessor( :estimatedT1CashPerIndexReceipt )
+  attr_accessor( :navPerCreationUnit )
+  attr_accessor( :navPerIndexReceipt )
   attr_accessor( :totalCashAmount )
-
-  #Net Asset Value Per Creation Unit...99,999,999,999.99
-  attr_accessor( :nav )
-
-  #Components...
+  attr_accessor( :totalSharesOutstanding )
+  attr_accessor( :dividendAmount )
+  attr_accessor( :cashIndicator )
   attr_accessor( :components )
 
   def initialize( aSymbol )
@@ -130,7 +134,8 @@ def parse_nscc_basket_composition_file( aFile )
   aBasket = nil
   dirty = false
   
-  IO.foreach(aFile) do |line| 
+  IO.foreach(aFile) do |line|
+    line.chomp!
     case line[0..1]
       when '01' # basket header type record
         # new basket...save the old basket #if it is not dirty
@@ -145,18 +150,59 @@ def parse_nscc_basket_composition_file( aFile )
         #Index Receipt CUSIP...S&P assigned CUSIP
         aBasket.cusip = line[17..25].strip
 
-        #Create/Redeem Units per Trade
-        aBasket.creationUnit = line[45..52].to_i
+        #When Issued Indicator...0 = Regular Way 1 = When Issued
+        aBasket.whenIssuedIndicator = line[26]
+        
+        #Foreign Indicator...0 = Domestic 1 = Foreign
+        aBasket.foreignIndicator = line[27]
+        
+        #Exchange Indicator...0 = NYSE 1 = AMEX 2 = Other
+        aBasket.exchangeIndicator = line[28]
+        
+        #Portfolio Trade Date...CCYYMMDD
+        aBasket.tradeDate = line[29..36]
+        
+        #Component Count...99,999,999
+        aBasket.componentCount = line[37..44].to_i
+        
+        #Create/Redeem Units per Trade...99,999,999
+        aBasket.creationUnitsPerTrade = line[45..52].to_i
 
+        #Estimated T-1 Cash Amount Per Creation Unit...999,999,999,999.99-
+        aBasket.estimatedT1CashAmountPerCreationUnit = "#{line[53..64]}.#{line[65..66]}".to_f
+        sign = line[67]
+        if sign == '-' then aBasket.estimatedT1CashAmountPerCreationUnit *= -1 end
+        
+        #Estimated T-1 Cash Per Index Receipt...99,999,999,999.99
+        aBasket.estimatedT1CashPerIndexReceipt = "#{line[68..78]}.#{line[79..80]}".to_f
+        sign = line[81]
+        if sign == '-' then aBasket.estimatedT1CashPerIndexReceipt *= -1 end
+        
+        #Net Asset Value Per Creation Unit...99,999,999,999.99
+        aBasket.navPerCreationUnit = "#{line[82..92]}.#{line[93..94]}".to_f
+        sign = line[95]
+        if sign == '-' then aBasket.navPerCreationUnit *= -1 end
+
+        #Net Asset Value Per Index Receipt...99,999,999,999.99
+        aBasket.navPerIndexReceipt = "#{line[96..106]}.#{line[107..108]}".to_f
+        sign = line[109]
+        if sign == '-' then aBasket.navPerIndexReceipt *= -1 end
+        
         #Total Cash Amount Per Creation Unit...99,999,999,999.99-
         aBasket.totalCashAmount = "#{line[110..120]}.#{line[121..122]}".to_f
         sign = line[123]
         if sign == '-' then aBasket.totalCashAmount *= -1 end
 
-        #Net Asset Value Per Creation Unit...99,999,999,999.99
-        aBasket.nav = "#{line[82..92]}.#{line[93..94]}".to_f
-        sign = line[95]
-        if sign == '-' then aBasket.nav *= -1 end
+        #Total Shares Outstanding Per ETF...999,999,999,999
+        aBasket.totalSharesOutstanding = line[124..135].to_i
+        
+        #Dividend Amount Per Index Receipt...99,999,999,999.99
+        aBasket.dividendAmount = "#{line[136..146]}.#{line[147..148]}".to_f
+        sign = line[149]
+        if sign == '-' then aBasket.dividendAmount *= -1 end        
+
+        #Cash / Security Indicator...  1 = Cash only 2 = Cash or components other – components only
+        aBasket.cashIndicator = line[150]
       when '02'
         # basket component symbol...Trading Symbol
         sym = line[2..16].strip
