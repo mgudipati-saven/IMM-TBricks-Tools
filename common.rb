@@ -376,13 +376,13 @@ def create_basket_components_xml(outfile, baskets)
     baskets.each do |aBasket|
       xml.etf("short_name"=>aBasket.tickerSymbol) {
         # NAV defined by Michael R. Conners...totalCashAmount/creationUnit
-        nav = aBasket.totalCashAmount/aBasket.creationUnit
+        nav = aBasket.totalCashAmount/aBasket.creationUnitsPerTrade
         xml.parameter("name"=>"netassetvalue", "value"=>sprintf("%.4f", nav))
         xml.basket("short_name"=>"#{aBasket.tickerSymbol} Basket") {
           xml.legs {
             aBasket.components.each do |aComponent|
               # Ratio defined by Michael R. Conners...shareQuantity/creationUnit
-              ratio = aComponent.shareQuantity/aBasket.creationUnit
+              ratio = aComponent.shareQuantity/aBasket.creationUnitsPerTrade
               xml.leg("short_name"=>aComponent.tickerSymbol, "mic"=>"BATS", "ratio"=>sprintf("%.4f", ratio))
             end
           }
