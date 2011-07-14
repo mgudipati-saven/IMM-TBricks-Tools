@@ -49,8 +49,12 @@ end
 
 # Basket Component
 class BasketComponent < Security
-  #Component Share Qty...99,999,999
+  attr_accessor( :whenIssuedIndicator )
+  attr_accessor( :foreignIndicator )
+  attr_accessor( :exchangeIndicator )
+  attr_accessor( :tradeDate )
   attr_accessor( :shareQuantity )
+  attr_accessor( :newSecurityIndicator )
 end
 
 #
@@ -130,17 +134,19 @@ end
 # => 02ALX            0147521090002011062400000013WREI           18383M472002
 # => ...
 def parse_nscc_basket_composition_file( aFile )
-  baskets = Array.new
+  baskets_a = Array.new
   aBasket = nil
   dirty = false
+  numrec = 0
   
   IO.foreach(aFile) do |line|
     line.chomp!
     case line[0..1]
-      when '01' # basket header type record
+      when '01' #Basket Header
+        numrec += 1
         # new basket...save the old basket #if it is not dirty
         if aBasket != nil #&& !dirty
-          baskets.push(aBasket)
+          baskets_a.push(aBasket)
         end
 
         #Index Receipt Symbol...Trading Symbol
@@ -203,8 +209,9 @@ def parse_nscc_basket_composition_file( aFile )
 
         #Cash / Security Indicator...  1 = Cash only 2 = Cash or components other – components only
         aBasket.cashIndicator = line[150]
-      when '02'
-        # basket component symbol...Trading Symbol
+      when '02' #Basket Component Detail
+        numrec += 1
+        #Component Symbol...Trading Symbol
         sym = line[2..16].strip
         if sym == ''
           # mark components with blank symbol as dirty baskets
@@ -213,17 +220,39 @@ def parse_nscc_basket_composition_file( aFile )
 
         aComponent = BasketComponent.new(sym)
 
-        # Component CUSIP...S&P assigned CUSIP
+        #Component CUSIP...S&P assigned CUSIP
         aComponent.cusip = line[17..25].strip
+
+        #When Issued Indicator...0 = Regular Way 1 = When Issued
+        aComponent.whenIssuedIndicator = line[26]
+        
+        #Foreign Indicator...0 = Domestic 1 = Foreign
+        aComponent.foreignIndicator = line[27]
+        
+        #Exchange Indicator...0 = NYSE 1 = AMEX 2 = Other
+        aComponent.exchangeIndicator = line[28]
+        
+        #Portfolio Trade Date...CCYYMMDD
+        aComponent.tradeDate = line[29..36]
 
         #Component Share Qty...99,999,999
         aComponent.shareQuantity = line[37..44].to_f
 
+        #New Security Indicator...N = New CUSIP Space = Old CUSIP
+        aComponent.newSecurityIndicator = line[72]
+        
         aBasket.components.push(aComponent)
+      when '09' #File Trailer
+        numrec += 1
+        # Record Count...99,999,999 Includes Records 01, 02, 09
+        reccnt = line[37..44].to_i
+        if numrec != reccnt
+          puts "Error in DTCC File: records found:#{numrec} != records reported:#{reccnt}"
+        end
     end
   end
   
-  return baskets
+  return baskets_a
 end
 
 # build the tbricks instruments xml file

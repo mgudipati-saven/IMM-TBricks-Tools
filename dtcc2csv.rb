@@ -24,9 +24,8 @@ opts.each do |opt, arg|
   end  
 end
 
-baskets = Array.new
 if infile && File.exist?(infile)
-  baskets = parse_nscc_basket_composition_file(infile)
+  baskets_a = parse_nscc_basket_composition_file(infile)
   #p baskets
   #puts "Basket count => #{baskets.length}"
   # create a csv file of basket records
@@ -49,7 +48,7 @@ if infile && File.exist?(infile)
     "Cash or Security Indicator"
     ]
   CSV.open("dtcc-baskets.csv", "wb", :headers => headers_a, :write_headers => true) do |csv|
-    baskets.each do |aBasket|
+    baskets_a.each do |aBasket|
       csv << [
         aBasket.tickerSymbol,
         aBasket.cusip,
@@ -77,7 +76,7 @@ if infile && File.exist?(infile)
     "Component CUSIP",
     "Component Share Qty"
     ]
-  baskets.each do |aBasket|
+  baskets_a.each do |aBasket|
     CSV.open("dtcc-components-#{aBasket.tickerSymbol}.csv", "wb", :headers => headers_a, :write_headers => true) do |csv|
       aBasket.components.each do |aComponent|
         csv << [
