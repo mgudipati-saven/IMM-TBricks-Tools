@@ -46,9 +46,9 @@ if infile && File.exist?(infile)
   CSV.foreach(infile, :quote_char => '"', :col_sep =>',', :row_sep => :auto, :headers => true) do |row|
     symbol = row.field('Symbol')
     ext = row.field('Ext')
-    if ext != nil then symbol += ".#{ext}" end
+    if ext then symbol += ".#{ext}" end
   
-    if symbol != nil then
+    if symbol
       $redisdb.hmset  "SYMLIST:SECURITIES:BYTICKER:#{symbol}",
         "TickerSymbol", symbol,
         "CUSIP", row.field('CUSIP'),
@@ -57,7 +57,7 @@ if infile && File.exist?(infile)
     end
 
     cusip = row.field('CUSIP')
-    if cusip != nil
+    if cusip
       $redisdb.hset "SYMLIST:SECURITIES:BYCUSIP:#{cusip}", 
         "TickerSymbol", symbol
     end

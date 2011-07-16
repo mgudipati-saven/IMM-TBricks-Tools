@@ -45,12 +45,12 @@ $securities_by_cusip = Hash.new
 def create_securities_maps(securities)
   securities.each do |aSecurity|
     # create a map keyed by ticker symbol
-    if aSecurity.tickerSymbol != nil
+    if aSecurity.tickerSymbol
       $securities_by_ticker[aSecurity.tickerSymbol] = aSecurity
     end
 
     # create a map keyed by cusip
-    if aSecurity.cusip != nil
+    if aSecurity.cusip
       $securities_by_cusip[aSecurity.cusip] = aSecurity
     end
   end
@@ -104,7 +104,7 @@ if nscc_file && File.exist?(nscc_file)
     end
     aBasket.components.each do |aComponent|
       sec = $securities_by_cusip["#{aComponent.cusip}"]
-      if sec != nil
+      if sec
         aComponent.tickerSymbol = sec.tickerSymbol
       else
         $LOG.info("missing CUSIP: #{aComponent.cusip}")

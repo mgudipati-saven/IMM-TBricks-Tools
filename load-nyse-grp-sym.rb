@@ -45,7 +45,7 @@ if infile && File.exist?(infile)
   CSV.foreach(infile, :quote_char => '"', :col_sep =>',', :row_sep => :auto, :headers => true) do |row|
     symbol = row.field('Symbol')
     cusip = row.field('CUSIP').rjust(9, '0')
-    if symbol != nil then
+    if symbol
       # Symbology conversion...BRK A => BRK.A
       symbol = symbol.sub(" ", ".")
       $redisdb.hmset  "NYSEGRP:SECURITIES:BYTICKER:#{symbol}",
@@ -54,7 +54,7 @@ if infile && File.exist?(infile)
         "Exchange", row.field('PrimaryMarket'),
         "Name", row.field('CompanyName')
 
-        if cusip != nil
+        if cusip
           $redisdb.hset "NYSEGRP:SECURITIES:BYCUSIP:#{cusip}", 
             "TickerSymbol", symbol
         end

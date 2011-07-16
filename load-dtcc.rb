@@ -53,7 +53,7 @@ if infile && File.exist?(infile)
                     "CashIndicator", aBasket.cashIndicator
                     
     # store the basket components
-    if aBasket.components != nil
+    if aBasket.components
       arr = Array.new
       aBasket.components.each do |aComponent|
         hash = Hash.new

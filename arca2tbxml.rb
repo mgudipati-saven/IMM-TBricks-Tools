@@ -35,7 +35,7 @@ securities = Array.new
 if infile && File.exist?(infile)
 	CSV.foreach(infile, :quote_char => '"', :col_sep =>',', :row_sep => :auto, :headers => true) do |row|
     sym = row.field('symbol')
-    if sym != nil then
+    if sym
       # create a new security by passing the ticker symbol as argument
       security = Security.new(sym)
 

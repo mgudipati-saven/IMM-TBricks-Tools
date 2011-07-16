@@ -105,7 +105,7 @@ def parse_nyse_grp_sym_file( aFile )
   
   CSV.foreach(aFile, :quote_char => '"', :col_sep =>',', :row_sep => :auto, :headers => true) do |row|
     symbol = row.field('Symbol')
-    if symbol != nil then
+    if symbol
       # Symbology conversion...BRK A => BRK.A
       symbol = symbol.sub(" ", ".")
 
@@ -145,7 +145,7 @@ def parse_nscc_basket_composition_file( aFile )
       when '01' #Basket Header
         numrec += 1
         # new basket...save the old basket #if it is not dirty
-        if aBasket != nil #&& !dirty
+        if aBasket #&& !dirty
           baskets_a.push(aBasket)
         end
 
@@ -431,7 +431,7 @@ def parse_xignite_master_securities_file( aFile )
   
   CSV.foreach(aFile, :quote_char => '"', :col_sep =>',', :row_sep => :auto, :headers => true) do |row|
     sym = row.field(' Records Record Symbol')
-    if sym != nil then
+    if sym
       # create a new security by passing the ticker symbol as argument
       security = Security.new(sym)
 
