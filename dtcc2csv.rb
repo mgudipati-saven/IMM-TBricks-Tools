@@ -26,7 +26,21 @@ end
 
 if infile && File.exist?(infile)
   baskets_a = parse_nscc_basket_composition_file(infile)
-=begin
+  
+  # create a map of costituent tickers with share qty for each etf
+  components_h = Hash.new
+  baskets_a.each do |aBasket|
+    aBasket.components.each do |aComponent|
+      if aComponent.tickerSymbol != ''
+        hash = components_h[aComponent.tickerSymbol]
+        if !hash
+          components_h[aComponent.tickerSymbol] = hash = Hash.new
+        end
+        hash[aBasket.tickerSymbol] = aComponent.shareQuantity
+      end
+    end
+  end
+
   # create a csv file of basket records
   headers_a = [
     "Index Receipt Symbol",
@@ -92,7 +106,7 @@ if infile && File.exist?(infile)
       end
     end
   end
-=end
+
   # create "All-All" file for Mike Conners...basket header fields followed by constituents layedout vertically
   # Index Receipt Symbol,A,B,C,D,E,F,...
   # CUSIP,123456789,123456780,...
@@ -102,7 +116,7 @@ if infile && File.exist?(infile)
   # BBB,100.0,12,111,2,....
   # ...
   CSV.open("dtcc-all-all.csv", "wb") do |csv|
-    # Index Receipt Symbol, A, AA, AAA, ...
+    # Basket header rows...Index Receipt Symbol, ...
     arr = ['Index Receipt Symbol']
     baskets_a.each do |aBasket|
       arr.push(aBasket.tickerSymbol)
@@ -197,7 +211,18 @@ if infile && File.exist?(infile)
     baskets_a.each do |aBasket|
       arr.push(aBasket.cashIndicator)
     end
-    csv << arr  
+    csv << arr
+    
+    # Basket component rows...component, share qty, share qty, ...  
+    components_h.each do |key, value|
+      arr = [key]
+      baskets_a.each do |aBasket|
+        qty = value[aBasket.tickerSymbol]
+        if !qty then qty = '' end
+        arr.push(qty)
+      end
+      csv << arr
+    end
   end
 else
   puts "File not found #{infile}"
