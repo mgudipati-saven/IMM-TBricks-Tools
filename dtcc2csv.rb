@@ -26,8 +26,7 @@ end
 
 if infile && File.exist?(infile)
   baskets_a = parse_nscc_basket_composition_file(infile)
-  #p baskets
-  #puts "Basket count => #{baskets.length}"
+=begin
   # create a csv file of basket records
   headers_a = [
     "Index Receipt Symbol",
@@ -47,6 +46,9 @@ if infile && File.exist?(infile)
     "Dividend Amount Per Index Receipt",
     "Cash or Security Indicator"
     ]
+  # A,123456789,....
+  # B,123456780,....
+  # ...
   CSV.open("dtcc-baskets.csv", "wb", :headers => headers_a, :write_headers => true) do |csv|
     baskets_a.each do |aBasket|
       csv << [
@@ -77,6 +79,9 @@ if infile && File.exist?(infile)
     "Component Share Qty"
     ]
   baskets_a.each do |aBasket|
+    # AAA,123456789,1000.0
+    # BBB,123456780,1000.0
+    # ...
     CSV.open("dtcc-components-#{aBasket.tickerSymbol}.csv", "wb", :headers => headers_a, :write_headers => true) do |csv|
       aBasket.components.each do |aComponent|
         csv << [
@@ -86,6 +91,113 @@ if infile && File.exist?(infile)
           ]
       end
     end
+  end
+=end
+  # create "All-All" file for Mike Conners...basket header fields followed by constituents layedout vertically
+  # Index Receipt Symbol,A,B,C,D,E,F,...
+  # CUSIP,123456789,123456780,...
+  # ...
+  # ...
+  # AAA,1000.0,,,,100,10....
+  # BBB,100.0,12,111,2,....
+  # ...
+  CSV.open("dtcc-all-all.csv", "wb") do |csv|
+    # Index Receipt Symbol, A, AA, AAA, ...
+    arr = ['Index Receipt Symbol']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.tickerSymbol)
+    end
+    csv << arr
+
+    arr = ['Index Receipt CUSIP']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.cusip)
+    end
+    csv << arr
+    
+    arr = ['When Issued Indicator']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.whenIssuedIndicator)
+    end
+    csv << arr
+
+    arr = ['Foreign Indicator']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.foreignIndicator)
+    end
+    csv << arr
+
+    arr = ['Exchange Indicator']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.exchangeIndicator)
+    end
+    csv << arr
+
+    arr = ['Portfolio Trade Date']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.tradeDate)
+    end
+    csv << arr
+
+    arr = ['Component Count']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.componentCount)
+    end
+    csv << arr
+
+    arr = ['Create or Redeem Units per Trade']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.creationUnitsPerTrade)
+    end
+    csv << arr
+
+    arr = ['Estimated T-1 Cash Amount Per Creation Unit']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.estimatedT1CashAmountPerCreationUnit)
+    end
+    csv << arr
+
+    arr = ['Estimated T-1 Cash Per Index Receipt']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.estimatedT1CashPerIndexReceipt)
+    end
+    csv << arr
+
+    arr = ['Net Asset Value Per Creation Unit']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.navPerCreationUnit)
+    end
+    csv << arr
+
+    arr = ['Net Asset Value Per Index Receipt']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.navPerIndexReceipt)
+    end
+    csv << arr  
+
+    arr = ['Total Cash Amount Per Creation Unit']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.totalCashAmount)
+    end
+    csv << arr  
+
+    arr = ['Total Shares Outstanding Per ETF']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.totalSharesOutstanding)
+    end
+    csv << arr  
+
+    arr = ['Dividend Amount Per Index Receipt']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.dividendAmount)
+    end
+    csv << arr  
+
+    arr = ['Cash or Security Indicator']
+    baskets_a.each do |aBasket|
+      arr.push(aBasket.cashIndicator)
+    end
+    csv << arr  
   end
 else
   puts "File not found #{infile}"
