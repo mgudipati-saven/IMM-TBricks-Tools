@@ -38,22 +38,13 @@ basket_stub_instruments_file = out_params['BasketStubInstruments'].strip
 basket_components_file = out_params['BasketComponents'].strip
 
 # Master securities map
-$securities_by_ticker = Hash.new
-$securities_by_cusip = Hash.new
+$securities_by_ticker = nil
+$securities_by_cusip = nil
 
 # creates securities maps - by ticker, by cusip
 def create_securities_maps(securities)
-  securities.each do |aSecurity|
-    # create a map keyed by ticker symbol
-    if aSecurity.tickerSymbol
-      $securities_by_ticker[aSecurity.tickerSymbol] = aSecurity
-    end
-
-    # create a map keyed by cusip
-    if aSecurity.cusip
-      $securities_by_cusip[aSecurity.cusip] = aSecurity
-    end
-  end
+  $securities_by_ticker = create_securities_map_by_ticker(securities)
+  $securities_by_cusip = create_securities_map_by_cusip(securities)
 end
 
 case src  

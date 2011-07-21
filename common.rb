@@ -4,6 +4,7 @@ require 'builder'
 
 # Security
 class Security
+  attr_accessor( :type )
   attr_accessor( :tickerSymbol )
   attr_accessor( :cusip )
   attr_accessor( :cik )
@@ -58,27 +59,28 @@ class BasketComponent < Security
 end
 
 #
-# Process the symbol list file
-# Symbol list file layout is defined as follows:
+# Process the EDGE symbol list file
+# EDGE symbol list file layout is defined as follows:
 # Header record:
 # => CUSIP,Symbol,Ext,Company Name,Primary Market,Round Lot Size,Min Order Qty
 #
 # Data record:
 # => 00846U101,A,,AGILENT TECHNOLOGIES INC,NYSE,100,0
 # 
-def parse_symbol_list_file( aFile )
+def parse_edge_symbol_list_file( aFile )
   securities = Array.new
   
   CSV.foreach(aFile, :quote_char => '"', :col_sep =>',', :row_sep => :auto, :headers => true) do |row|
     symbol = row.field('Symbol')
     ext = row.field('Ext')
-    if ext != '' then symbol += ".#{ext}" end
+    if ext then symbol += ".#{ext}" end
   
-    if symbol != '' then
+    if symbol
       # create a new security by passing the ticker symbol as argument
       security = Security.new(symbol)
-
+      
       # populate the attributes
+      security.type = ext
       security.cusip = row.field('CUSIP')
       security.exchange = row.field('Primary Market')
       security.name = row.field('Company Name')
@@ -454,4 +456,30 @@ def parse_xignite_master_securities_file( aFile )
   end # CSV.foreach
   
   return securities
+end
+
+# creates a securities map by ticker
+def create_securities_map_by_ticker(securities)
+  map = Hash.new
+  securities.each do |aSecurity|
+    # create a map keyed by ticker symbol
+    if aSecurity.tickerSymbol
+      map[aSecurity.tickerSymbol] = aSecurity
+    end
+  end
+  
+  return map
+end
+
+# creates securities map by cusip
+def create_securities_map_by_cusip(securities)
+  map = Hash.new
+  securities.each do |aSecurity|
+    # create a map keyed by cusip
+    if aSecurity.cusip
+      map[aSecurity.cusip] = aSecurity
+    end
+  end
+  
+  return map
 end

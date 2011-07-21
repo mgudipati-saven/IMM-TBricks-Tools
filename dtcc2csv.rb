@@ -24,6 +24,9 @@ opts.each do |opt, arg|
   end  
 end
 
+$securities = parse_edge_symbol_list_file('/Users/saven/Documents/EDGE.7.19.2011.sorts.csv')
+$securities_by_cusip = create_securities_map_by_cusip($securities)
+
 if infile && File.exist?(infile)
   baskets_a = parse_nscc_basket_composition_file(infile)
   
@@ -31,10 +34,10 @@ if infile && File.exist?(infile)
   components_h = Hash.new
   baskets_a.each do |aBasket|
     aBasket.components.each do |aComponent|
-      if aComponent.tickerSymbol != ''
-        hash = components_h[aComponent.tickerSymbol]
+      if aComponent.cusip
+        hash = components_h[aComponent.cusip]
         if !hash
-          components_h[aComponent.tickerSymbol] = hash = Hash.new
+          components_h[aComponent.cusip] = hash = Hash.new
         end
         hash[aBasket.tickerSymbol] = aComponent.shareQuantity
       end
@@ -215,13 +218,17 @@ if infile && File.exist?(infile)
     
     # Basket component rows...component, share qty, share qty, ...  
     components_h.each do |key, value|
-      arr = [key]
-      baskets_a.each do |aBasket|
-        qty = value[aBasket.tickerSymbol]
-        if !qty then qty = '' end
-        arr.push(qty)
+      # Filter out common stocks...
+      if !$securities_by_cusip.key?(key) then puts "#{key}" end
+      if $securities_by_cusip.key?(key) && $securities_by_cusip[key].type
+        arr = [$securities_by_cusip[key].tickerSymbol]
+        baskets_a.each do |aBasket|
+          qty = value[aBasket.tickerSymbol]
+          if !qty then qty = '' end
+          arr.push(qty)
+        end
+        csv << arr
       end
-      csv << arr
     end
   end
 else
