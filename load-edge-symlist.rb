@@ -38,6 +38,7 @@ if infile && File.exist?(infile)
   securities = parse_edge_symbol_list_file(infile)
   securities.each do |aSecurity|
     $redisdb.hmset  "EDGA:#{aSecurity.tickerSymbol}",
+      "TickerSymbol", aSecurity.tickerSymbol,
       "CUSIP", aSecurity.cusip,
       "Name", aSecurity.name,
       "Lot", aSecurity.lot,

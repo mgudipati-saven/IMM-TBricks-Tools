@@ -220,7 +220,7 @@ if infile && File.exist?(infile)
     components_h.each do |key, value|
       # Filter out common stocks...
       if !$securities_by_cusip.key?(key) then puts "#{key}" end
-      if $securities_by_cusip.key?(key) && $securities_by_cusip[key].type
+      if $securities_by_cusip.key?(key) #&& $securities_by_cusip[key].type
         arr = [$securities_by_cusip[key].tickerSymbol]
         baskets_a.each do |aBasket|
           qty = value[aBasket.tickerSymbol]

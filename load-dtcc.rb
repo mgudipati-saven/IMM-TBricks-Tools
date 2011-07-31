@@ -54,15 +54,11 @@ if infile && File.exist?(infile)
                     
     # store the basket components
     if aBasket.components
-      arr = Array.new
+      hash = Hash.new
       aBasket.components.each do |aComponent|
-        hash = Hash.new
-        hash['TickerSymbol'] = aComponent.tickerSymbol
-        hash['ShareQuantity'] = aComponent.shareQuantity
-        hash['CUSIP'] = aComponent.cusip
-        arr.push(hash)
+        hash[aComponent.cusip] = aComponent.shareQuantity
       end
-      json = JSON.generate arr
+      json = JSON.generate hash
       $redisdb.hset "DTCC:BASKET:#{aBasket.tickerSymbol}", "Components", json
     end                          
   end

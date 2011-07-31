@@ -18,6 +18,9 @@ class Security
   attr_accessor( :sector )
   attr_accessor( :industry )
   attr_accessor( :companyName )
+  attr_accessor( :primaryMarket )
+  attr_accessor( :lot )
+  attr_accessor( :boardLot )
 
   def initialize( aSymbol )
     @tickerSymbol = aSymbol
@@ -82,8 +85,10 @@ def parse_edge_symbol_list_file( aFile )
       # populate the attributes
       security.type = ext
       security.cusip = row.field('CUSIP')
-      security.exchange = row.field('Primary Market')
+      security.primaryMarket = row.field('Primary Market')
       security.name = row.field('Company Name')
+      security.boardLot = row.field('Round Lot Size')
+      security.lot = row.field('Min Order Qty')      
 
       # push it to the securities list
       securities.push(security)
