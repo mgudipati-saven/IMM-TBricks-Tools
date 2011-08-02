@@ -37,7 +37,10 @@ $redisdb.select 0
 # => ...
 # Redis layout is as follows:
 # Key => DTCC:BASKET:#{Index Receipt CUSIP}
-# Value => Hashtable {"CUSIP" => "123456789, ""TickerSymbol" => "SPY", "CreationUnit" => "50000", ...}
+# Value => Hashtable {"CUSIP" => "123456789, ""TickerSymbol" => "ETFA", "CreationUnit" => "50000", ...}
+#
+# Key => DTCC:COMP:#{CUSIP}
+# Value => Hashtable {"CUSIP" => "123456789, ""TickerSymbol" => "IBM", "ETFA" => "500", "ETFB" => "100"}
 #
 if infile && File.exist?(infile)
   numrec = 0
@@ -130,7 +133,9 @@ if infile && File.exist?(infile)
         ccusip = line[17..25].strip
 
         #Create a component record
-        $redisdb.hmset "DTCC:COMP:#{ccusip}", "CUSIP", ccusip, "TickerSymbol", csym
+        key = "DTCC:COMP:#{ccusip}"
+        $redisdb.hsetnx key, "CUSIP", ccusip
+        $redisdb.hsetnx key, "TickerSymbol", csym
         
         #Component Share Qty...99,999,999
         qty = line[37..44].to_f
@@ -138,9 +143,8 @@ if infile && File.exist?(infile)
         #Index Receipt CUSIP...S&P assigned CUSIP
         bcusip = line[60..68].strip
         
-        #Update the basket record for this Index Receipt CUSIP
-        key = "DTCC:BASKET:#{bcusip}"
-        $redisdb.hset key, ccusip, qty
+        #Update the component record with the share qty for the basket
+        $redisdb.hset key, bcusip, qty
       when '09' #File Trailer
         numrec += 1
 
