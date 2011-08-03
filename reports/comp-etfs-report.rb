@@ -2,13 +2,9 @@
 
 require 'csv'
 require 'getoptlong'
+require 'redis'
+require 'json'
 
-# call using "ruby comp-etfs-report.rb -i<input file>"  
-unless ARGV.length == 1
-  puts "Usage: ruby comp-etfs-report.rb -i<input file>" 
-  exit  
-end  
-  
 infile = ''
 # specify the options we accept and initialize the option parser  
 opts = GetoptLong.new(  
@@ -22,6 +18,10 @@ opts.each do |opt, arg|
       infile = arg  
   end  
 end
+
+# open redis db
+$redisdb = Redis.new
+$redisdb.select 0
 
 # Process the NSCC basket composition file
 # NSCC file layout is defined as follows:
@@ -57,32 +57,55 @@ def parse_nscc_basket_composition_file( aFile )
   return hash
 end
 
+components_h = Hash.new
 if infile && File.exist?(infile)
-  hash = parse_nscc_basket_composition_file(infile)
-  
-  # create a csv file of components and the etf baskets each is part of
-  headers_a = [
-    "Count",
-    "Component Ticker",
-    "ETF Baskets"
-    ]
-  #
-  # 100,A,ETFA, ETFB, ETFC,....
-  # 11,B,ETFD, EFTF,...
-  # 110,C,ETFA,ETFF,...
-  # ...
-  CSV.open("comp-etfs-report.csv", "wb", :headers => headers_a, :write_headers => true) do |csv|
-    hash.each do |key, value|
-      csv << [value.length, key] + value
+  # use the dtcc file
+  #comp_h = parse_nscc_basket_composition_file(infile)
+else
+  puts "File not found #{infile}, using redis db..."
+
+  # use redis db
+  keys = $redisdb.keys "DTCC:BASKET:*"
+  keys.each do |key|
+    bcusip = $redisdb.hget key, "IndexReceiptCUSIP"
+    
+    # collect all the components for this basket
+    json = $redisdb.hget key, "Components"
+    if !json then p key end
+    if json
+      hash = JSON.parse json
+      hash.each do |ccusip, qty|
+        if !components_h.key?(ccusip)
+          components_h[ccusip] = Array.new
+        end
+        components_h[ccusip] << bcusip
+      end
     end
   end
-else
-  puts "File not found #{infile}"
 end # if File.exist?(infile)
+
+#
+# create a csv file of components and the etf baskets
+#
+# 100,A,ETFA, ETFB, ETFC,....
+# 11,B,ETFD, EFTF,...
+# 110,C,ETFA,ETFF,...
+#
+headers_a = [
+  "Count",
+  "Component Ticker",
+  "ETF Baskets"
+  ]
+CSV.open("comp-etfs-report.csv", "wb", :headers => headers_a, :write_headers => true) do |csv|
+  components_h.each do |key, value|
+    csv << [value.length, key] + value
+  end
+end
 
 =begin rdoc
  * Name: comp-etfs-report.rb
  * Description: Creates a report of security(s) and all the etfs it is part of.
+ * Call using "ruby comp-etfs-report.rb [-i<input file>]"  
  * Author: Murthy Gudipati
  * Date: 12-Jul-2011
  * License: Saven Technologies Inc.
