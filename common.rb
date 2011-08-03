@@ -21,18 +21,21 @@ class Security
   attr_accessor( :primaryMarket )
   attr_accessor( :lot )
   attr_accessor( :boardLot )
+  attr_accessor( :whenIssuedIndicator )
+  attr_accessor( :foreignIndicator )
+  attr_accessor( :exchangeIndicator )
+  attr_accessor( :tradeDate )
 
-  def initialize( aSymbol )
-    @tickerSymbol = aSymbol
+  def initialize( cusip )
+    if cusip == "" or cusip == nil
+      raise ArgumentError, "Invalid CUSIP Number!"
+    end
+    @cusip = cusip
   end  
 end
 
 # Basket
 class Basket < Security
-  attr_accessor( :whenIssuedIndicator )
-  attr_accessor( :foreignIndicator )
-  attr_accessor( :exchangeIndicator )
-  attr_accessor( :tradeDate )
   attr_accessor( :componentCount )
   attr_accessor( :creationUnitsPerTrade )
   attr_accessor( :estimatedT1CashAmountPerCreationUnit )
@@ -43,20 +46,19 @@ class Basket < Security
   attr_accessor( :totalSharesOutstanding )
   attr_accessor( :dividendAmount )
   attr_accessor( :cashIndicator )
-  attr_accessor( :components )
+  attr_reader( :components )
 
-  def initialize( aSymbol )
-    @tickerSymbol = aSymbol
-    @components = Array.new
-  end  
+  # adds a component to the basket
+  def add_component( aComponent )
+    if aComponent
+      if @components == nil then @components = Hash.new end
+      @components[aComponent.cusip] = aComponent
+    end
+  end
 end
 
 # Basket Component
 class BasketComponent < Security
-  attr_accessor( :whenIssuedIndicator )
-  attr_accessor( :foreignIndicator )
-  attr_accessor( :exchangeIndicator )
-  attr_accessor( :tradeDate )
   attr_accessor( :shareQuantity )
   attr_accessor( :newSecurityIndicator )
 end
@@ -143,7 +145,6 @@ end
 def parse_nscc_basket_composition_file( aFile )
   baskets_a = Array.new
   aBasket = nil
-  dirty = false
   numrec = 0
   
   IO.foreach(aFile) do |line|
@@ -151,17 +152,12 @@ def parse_nscc_basket_composition_file( aFile )
     case line[0..1]
       when '01' #Basket Header
         numrec += 1
-        # new basket...save the old basket #if it is not dirty
-        if aBasket #&& !dirty
-          baskets_a.push(aBasket)
-        end
+
+        #Index Receipt CUSIP...S&P assigned CUSIP
+        aBasket = Basket.new(line[17..25].strip)
 
         #Index Receipt Symbol...Trading Symbol
-        aBasket = Basket.new(line[2..16].strip)
-        dirty = false
-        
-        #Index Receipt CUSIP...S&P assigned CUSIP
-        aBasket.cusip = line[17..25].strip
+        aBasket.tickerSymbol = line[2..16].strip
 
         #When Issued Indicator...0 = Regular Way 1 = When Issued
         aBasket.whenIssuedIndicator = line[26]
@@ -216,19 +212,16 @@ def parse_nscc_basket_composition_file( aFile )
 
         #Cash / Security Indicator...  1 = Cash only 2 = Cash or components other – components only
         aBasket.cashIndicator = line[150]
+
+        baskets_a << aBasket
       when '02' #Basket Component Detail
         numrec += 1
-        #Component Symbol...Trading Symbol
-        sym = line[2..16].strip
-        if sym == ''
-          # mark components with blank symbol as dirty baskets
-          dirty = true
-        end
-
-        aComponent = BasketComponent.new(sym)
-
+        
         #Component CUSIP...S&P assigned CUSIP
-        aComponent.cusip = line[17..25].strip
+        aComponent = BasketComponent.new(line[17..25].strip)
+
+        #Component Symbol...Trading Symbol
+        aComponent.tickerSymbol = line[2..16].strip
 
         #When Issued Indicator...0 = Regular Way 1 = When Issued
         aComponent.whenIssuedIndicator = line[26]
@@ -248,7 +241,7 @@ def parse_nscc_basket_composition_file( aFile )
         #New Security Indicator...N = New CUSIP Space = Old CUSIP
         aComponent.newSecurityIndicator = line[72]
         
-        aBasket.components.push(aComponent)
+        aBasket.add_component(aComponent)
       when '09' #File Trailer
         numrec += 1
         # Record Count...99,999,999 Includes Records 01, 02, 09
