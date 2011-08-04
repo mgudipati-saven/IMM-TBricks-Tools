@@ -12,13 +12,19 @@ class Security
   attr_accessor( :sedol )
   attr_accessor( :valoren )
   attr_accessor( :exchange )
-  attr_accessor( :name )
-  attr_accessor( :shortName )
-  attr_accessor( :issue )
-  attr_accessor( :sector )
-  attr_accessor( :industry )
-  attr_accessor( :companyName )
   attr_accessor( :primaryMarket )
+  attr_accessor( :name )
+  attr_accessor( :companyName )
+  attr_accessor( :shortName )
+  attr_accessor( :industryCode )
+  attr_accessor( :industryName )
+  attr_accessor( :superSectorCode )
+  attr_accessor( :superSectorName )
+  attr_accessor( :sectorCode )
+  attr_accessor( :sectorName )
+  attr_accessor( :subSectorCode )
+  attr_accessor( :subSectorName )
+  attr_accessor( :issue )
   attr_accessor( :lot )
   attr_accessor( :boardLot )
   attr_accessor( :whenIssuedIndicator )
@@ -87,7 +93,7 @@ def parse_edge_symbol_list_file( aFile )
       security.tickerSymbol = row.field('Symbol') + (ext ? ".#{ext}" : "")
       security.type = ext
       security.primaryMarket = row.field('Primary Market')
-      security.name = row.field('Company Name')
+      security.companyName = row.field('Company Name')
       security.boardLot = row.field('Round Lot Size')
       security.lot = row.field('Min Order Qty')      
 
@@ -109,28 +115,36 @@ end
 # => AA,13817101,"ALCOA, INC",N,N,1000,1700,1750,1753,Basic Materials,Basic Resources,Industrial Metals & Mining,Aluminum
 # 
 def parse_nyse_grp_sym_file( aFile )
-  securities = Array.new
+  securities_a = Array.new
   
   CSV.foreach(aFile, :quote_char => '"', :col_sep =>',', :row_sep => :auto, :headers => true) do |row|
-    symbol = row.field('Symbol')
-    if symbol
-      # Symbology conversion...BRK A => BRK.A
-      symbol = symbol.sub(" ", ".")
+    cusip = row.field('CUSIP').rjust(9, '0')
+    if cusip
+      # create a new security by passing the cusip as argument
+      security = Security.new(cusip)
 
-      # create a new security by passing the ticker symbol as argument
-      security = Security.new(symbol)
+      # Symbology conversion...BRK A => BRK.A
+      security.tickerSymbol = row.field('Symbol').sub(" ", ".")
 
       # populate the attributes
-      security.cusip = row.field('CUSIP').rjust(9, '0')
-      security.exchange = row.field('PrimaryMarket')
-      security.name = row.field('CompanyName')
+      security.exchange = row.field('NYSEGroupMarket')
+      security.primaryMarket = row.field('PrimaryMarket')
+      security.companyName = row.field('CompanyName')
+      security.industryCode = row.field('IndustryCode')
+      security.industryName = row.field('IndustryName')
+      security.superSectorCode = row.field('SuperSectorCode')
+      security.superSectorName = row.field('SuperSectorName')
+      security.sectorCode = row.field('SectorCode')
+      security.sectorName = row.field('SectorName')
+      security.subSectorCode = row.field('SubSectorCode')
+      security.subSectorName = row.field('SubSectorName')
 
       # push it to the securities list
-      securities.push(security)
+      securities_a.push(security)
     end
   end # CSV.foreach
   
-  return securities
+  return securities_a
 end
 
 # Process the NSCC basket composition file

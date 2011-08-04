@@ -1,6 +1,7 @@
 require 'csv'
 require 'redis'
 require 'getoptlong'
+require_relative 'common'
 
 # call using "ruby load-nyse-grp-sym.rb -i<file>"  
 unless ARGV.length >= 1
@@ -26,42 +27,57 @@ $redisdb = Redis.new
 $redisdb.select 0
 
 #
-# Process the nyse group symbol file
-# Symbol file layout is defined as follows:
-# Header record:
-# => Symbol,CUSIP,CompanyName,NYSEGroupMarket,PrimaryMarket,IndustryCode,SuperSectorCode,SectorCode,SubSectorCode,IndustryName,SuperSectorName,SectorName,SubSectorName
-#
-# Data record:
-# => AA,13817101,"ALCOA, INC",N,N,1000,1700,1750,1753,Basic Materials,Basic Resources,Industrial Metals & Mining,Aluminum
+# Load the nyse group symbol file into redis db
 # 
 # Redis layout is as follows:
-# Key => NYSEGRP:SECURITIES:BYTICKER:#{TickerSymbol}
-# Value => Hashtable {"TickerSymbol", "CUSIP", ...}
+# Key => ARCX:#{TickerSymbol} for NYSE ARCA
+# Value => Hashtable {"TickerSymbol" => "IBM", "CUSIP" => "123456789", ...}
 #
-# Key => NYSEGRP:SECURITIES:BYCUSIP:#{CUSIP}
-# Value => Hashtable {"TickerSymbol"}
+# Key => XASE:#{TickerSymbol} for NYSE AMEX
+# Value => Hashtable {"TickerSymbol" => "IBM", "CUSIP" => "123456789", ...}
+#
+# Key => XNYS:#{TickerSymbol} for NYSE
+# Value => Hashtable {"TickerSymbol" => "IBM", "CUSIP" => "123456789", ...}
+#
+# Key => SECURITIES:XREF:#{CUSIP}
+# Value => Hashtable {"CUSIP" => "123456789", "ARCX" => "IBM", "XASE" => "IBM", "XNYS" => "IBM"}
 #
 if infile && File.exist?(infile)
-  CSV.foreach(infile, :quote_char => '"', :col_sep =>',', :row_sep => :auto, :headers => true) do |row|
-    symbol = row.field('Symbol')
-    cusip = row.field('CUSIP').rjust(9, '0')
-    if symbol
-      # Symbology conversion...BRK A => BRK.A
-      symbol = symbol.sub(" ", ".")
-      $redisdb.hmset  "NYSEGRP:SECURITIES:BYTICKER:#{symbol}",
-        "TickerSymbol", symbol,
-        "CUSIP", cusip,
-        "Exchange", row.field('PrimaryMarket'),
-        "Name", row.field('CompanyName')
-
-        if cusip
-          $redisdb.hset "NYSEGRP:SECURITIES:BYCUSIP:#{cusip}", 
-            "TickerSymbol", symbol
-        end
-    else
-      puts "Symbol nil in record => #{row}"
+  securities_a = parse_nyse_grp_sym_file(infile)
+  securities_a.each do |aSecurity|
+    if aSecurity.cusip
+      mic = nil
+      case aSecurity.exchange
+        when 'A' # AMEX
+          mic = "XASE"
+        when 'N' # NYSE
+          mic = "XNYS"
+        when 'P' # ARCA
+          mic = "ARCX"
+      end
+      if mic
+        # update the exchange record for this cusip
+        $redisdb.hmset "#{mic}:#{aSecurity.cusip}",
+                        "CUSIP", aSecurity.cusip,
+                        "TickerSymbol", aSecurity.tickerSymbol,
+                        "Exchange", aSecurity.exchange,
+                        "CompanyName", aSecurity.companyName,
+                        "IndustryCode", aSecurity.industryCode,
+                        "IndustryName", aSecurity.industryName,
+                        "SuperSectorCode", aSecurity.superSectorCode,
+                        "SuperSectorName", aSecurity.superSectorName,
+                        "SectorCode", aSecurity.sectorCode,
+                        "SectorName", aSecurity.sectorName,
+                        "SubSectorCode", aSecurity.subSectorCode,
+                        "SubSectorName", aSecurity.subSectorName
+      end
+      
+      # update securities cross-reference record for this cusip
+      $redisdb.hmset  "SECURITIES:XREF:#{aSecurity.cusip}",
+        "CUSIP", aSecurity.cusip,
+        "#{mic}", aSecurity.tickerSymbol      
     end
-  end # CSV.foreach
+  end
 else
   puts "File not found #{infile}"
 end # if File.exist?(infile)

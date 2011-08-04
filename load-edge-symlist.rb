@@ -48,7 +48,7 @@ if infile && File.exist?(infile)
       "Lot", aSecurity.lot,
       "BoardLot", aSecurity.boardLot
 
-    # update securities cross-reference records
+    # update securities cross-reference record for this cusip
     $redisdb.hmset  "SECURITIES:XREF:#{aSecurity.cusip}",
       "CUSIP", aSecurity.cusip,
       "EDGA", aSecurity.tickerSymbol

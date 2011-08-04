@@ -31,11 +31,14 @@ $redisdb.select 0
 # Key => DTCC:BASKET:#{Index Receipt CUSIP}
 # Value => Hashtable {"IndexReceiptSymbol" => "SPY", "CreationUnit" => "50000", "Components" => json object of components hash}
 #
+# Key => SECURITIES:XREF:#{CUSIP}
+# Value => Hashtable {"CUSIP" => "123456789", "DTCC" => "IBM"}
+#
 if infile && File.exist?(infile)
   baskets_a = parse_nscc_basket_composition_file(infile)
   baskets_a.each do |aBasket| 
     # create a new basket record
-    $redisdb.hmset  "DTCC:BASKET:#{aBasket.cusip}",
+    $redisdb.hmset "DTCC:BASKET:#{aBasket.cusip}",
     					      "IndexReceiptCUSIP", aBasket.cusip,
     					      "IndexReceiptSymbol", aBasket.tickerSymbol,
     					      "WhenIssuedIndicator", aBasket.whenIssuedIndicator,
@@ -52,13 +55,23 @@ if infile && File.exist?(infile)
     					      "TotalSharesOutstanding", aBasket.totalSharesOutstanding,
     					      "DividendAmount", aBasket.dividendAmount,
                     "CashIndicator", aBasket.cashIndicator
+
+    # update securities cross-reference record for this basket
+    $redisdb.hmset "SECURITIES:XREF:#{aBasket.cusip}",
+      "CUSIP", aBasket.cusip,
+      "DTCC", aBasket.tickerSymbol
                     
     # store the basket components
     if aBasket.components
       hash = Hash.new
-      aBasket.components.each do |key, value|
-        #  cusip => share qty
-        hash[key] = value.shareQuantity
+      aBasket.components.each do |cusip, aComponent|
+        # cusip => share qty
+        hash[cusip] = aComponent.shareQuantity
+        
+        # update securities cross-reference record for this component
+        $redisdb.hmset "SECURITIES:XREF:#{aComponent.cusip}",
+          "CUSIP", aComponent.cusip,
+          "DTCC", aComponent.tickerSymbol        
       end
       json = JSON.generate hash
       $redisdb.hset "DTCC:BASKET:#{aBasket.cusip}", "Components", json
