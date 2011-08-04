@@ -76,17 +76,16 @@ def parse_edge_symbol_list_file( aFile )
   securities = Array.new
   
   CSV.foreach(aFile, :quote_char => '"', :col_sep =>',', :row_sep => :auto, :headers => true) do |row|
-    symbol = row.field('Symbol')
-    ext = row.field('Ext')
-    if ext then symbol += ".#{ext}" end
+    cusip = row.field('CUSIP')
   
-    if symbol
-      # create a new security by passing the ticker symbol as argument
-      security = Security.new(symbol)
+    if cusip
+      # create a new security by passing the cusip as argument
+      security = Security.new(cusip)
       
       # populate the attributes
+      ext = row.field('Ext')
+      security.tickerSymbol = row.field('Symbol') + (ext ? ".#{ext}" : "")
       security.type = ext
-      security.cusip = row.field('CUSIP')
       security.primaryMarket = row.field('Primary Market')
       security.name = row.field('Company Name')
       security.boardLot = row.field('Round Lot Size')

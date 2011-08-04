@@ -34,15 +34,25 @@ $redisdb.select 0
 # Key => EDGA:#{TickerSymbol}
 # Value => Hashtable {"TickerSymbol", "CUSIP", ...}
 #
+# Key => SECURITIES:XREF:#{CUSIP}
+# Value => Hashtable {"CUSIP" => "123456789", "EDGA" => "IBM"}
+#
 if infile && File.exist?(infile)
   securities = parse_edge_symbol_list_file(infile)
   securities.each do |aSecurity|
+    # update direct edge records
     $redisdb.hmset  "EDGA:#{aSecurity.tickerSymbol}",
       "TickerSymbol", aSecurity.tickerSymbol,
       "CUSIP", aSecurity.cusip,
       "Name", aSecurity.name,
       "Lot", aSecurity.lot,
       "BoardLot", aSecurity.boardLot
+
+    # update securities cross-reference records
+    $redisdb.hmset  "SECURITIES:XREF:#{aSecurity.cusip}",
+      "CUSIP", aSecurity.cusip,
+      "EDGA", aSecurity.tickerSymbol
+    
   end
 else
   puts "File not found #{infile}"
