@@ -26,6 +26,34 @@ end
 $redisdb = Redis.new
 $redisdb.select 0
 
+# prints db stats
+def print_stats
+  puts "DTCC DB Stats:"
+  keys = $redisdb.keys "DTCC:*"
+  puts "\tNum Baskets: #{keys.length}"
+  count = 0
+  keys = $redisdb.keys "SECURITIES:XREF:*"
+  keys.each do |aKey|
+    if $redisdb.hexists aKey, "DTCC"
+      count += 1
+    end
+  end
+  puts "\tNum DTCC Components: #{count}"
+end
+
+# flush the db records for keys DTCC:* and delete DTCC symbols from xref
+def flush_db
+  keys = $redisdb.keys "DTCC:*"
+  keys.each do |aKey|
+    $redisdb.del aKey
+  end    
+  keys = $redisdb.keys "SECURITIES:XREF:*"
+  keys.each do |aKey|
+    $redisdb.hdel aKey, "DTCC"
+  end
+  puts "Flushed out current db records for keys DTCC:*..."
+end
+
 #
 # Redis layout is as follows:
 # Key => DTCC:BASKET:#{Index Receipt CUSIP}
@@ -36,6 +64,15 @@ $redisdb.select 0
 #
 if infile && File.exist?(infile)
   baskets_a = parse_nscc_basket_composition_file(infile)
+  
+  if baskets_a and baskets_a.length != 0
+    # report current stats
+    print_stats
+    
+    # flush the current db records
+    flush_db
+  end
+  
   baskets_a.each do |aBasket| 
     # create a new basket record
     $redisdb.hmset "DTCC:BASKET:#{aBasket.cusip}",
@@ -77,6 +114,9 @@ if infile && File.exist?(infile)
       $redisdb.hset "DTCC:BASKET:#{aBasket.cusip}", "Components", json
     end                          
   end
+
+  # report new stats
+  print_stats
 else
   puts "File not found #{infile}"
 end # if File.exist?(infile)
