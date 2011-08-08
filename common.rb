@@ -31,6 +31,7 @@ class Security
   attr_accessor( :foreignIndicator )
   attr_accessor( :exchangeIndicator )
   attr_accessor( :tradeDate )
+  attr_accessor( :tape )
 
   def initialize( cusip )
     if cusip == "" or cusip == nil
@@ -67,6 +68,38 @@ end
 class BasketComponent < Security
   attr_accessor( :shareQuantity )
   attr_accessor( :newSecurityIndicator )
+end
+
+#
+# Process the NSX symbol list file
+# NSX symbol list file layout is defined as follows:
+# Header record:
+# => SYMBOL,CUSIP,TAPE,IS_TEST
+#
+# Data record:
+# => TSU,88706P106,A,N
+# 
+def parse_nsx_symbol_list_file( aFile )
+  securities = Array.new
+  
+  CSV.foreach(aFile, :quote_char => '"', :col_sep =>',', :row_sep => :auto, :headers => true) do |row|
+    cusip = row.field('CUSIP').rjust(9, '0')
+    test = row.field('IS_TEST') == 'N' ? false : true
+  
+    if cusip and !test
+      # create a new security by passing the cusip as argument
+      security = Security.new(cusip)
+      
+      # populate the attributes
+      security.tickerSymbol = row.field('SYMBOL')
+      security.tape = row.field('TAPE')
+
+      # push it to the securities list
+      securities.push(security)
+    end
+  end # CSV.foreach
+  
+  return securities
 end
 
 #
