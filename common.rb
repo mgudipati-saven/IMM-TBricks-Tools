@@ -333,7 +333,7 @@ end
 #    ...
 #  </instruments>
 #</resource>
-def create_tbricks_instruments_xml(outfile, securities)
+def create_tbricks_instruments_xml(outfile, securities, exchs)
   f = File.new(outfile, "w")
   xml = Builder::XmlMarkup.new(:target=>f, :indent=>2)
   xml.instruct!
@@ -358,24 +358,17 @@ def create_tbricks_instruments_xml(outfile, securities)
           xml.xml("type"=>"fixml")
           xml.groups
           xml.identifiers {
-            xml.identifier("venue"=>"7c15c3c2-4a25-11e0-b2a1-2a7689193271", "mic"=>"BATS") {
-              xml.fields {
-                xml.field("name"=>"exdestination", "value"=>"BATS")
-                xml.field("name"=>"symbol", "value"=>aSecurity.tickerSymbol)
-              }
-            }
-            xml.identifier("venue"=>"7c15c3c2-4a25-11e0-b2a1-2a7689193271", "mic"=>"EDGA") {
-              xml.fields {
-                xml.field("name"=>"exdestination", "value"=>"EDGA")
-                xml.field("name"=>"symbol", "value"=>aSecurity.tickerSymbol)
-              }
-            }
-            xml.identifier("venue"=>"7c15c3c2-4a25-11e0-b2a1-2a7689193271", "mic"=>"EDGX") {
-              xml.fields {
-                xml.field("name"=>"exdestination", "value"=>"EDGX")
-                xml.field("name"=>"symbol", "value"=>aSecurity.tickerSymbol)
-              }
-            }
+            exchs.each do |aExch|
+              sym = xref(aSecurity.cusip, aExch)
+              if sym
+                xml.identifier("venue"=>"7c15c3c2-4a25-11e0-b2a1-2a7689193271", "mic"=>aExch) {
+                  xml.fields {
+                    xml.field("name"=>"exdestination", "value"=>aExch)
+                    xml.field("name"=>"symbol", "value"=>sym)
+                  }
+                }
+              end
+            end
           }
         }
       end
@@ -526,4 +519,9 @@ def create_securities_map_by_cusip(securities)
   end
   
   return map
+end
+
+# returns an exchange specific ticker symbol
+def xref(cusip, exch)
+  
 end
