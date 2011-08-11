@@ -29,7 +29,9 @@ $redisdb.select 0
 # prints db stats
 def print_stats
   puts "DTCC DB Stats:"
-  keys = $redisdb.keys "DTCC:*"
+  ver = $redisdb.get "DTCC:VERSION"
+  puts "\tVersion: #{ver}"
+  keys = $redisdb.keys "DTCC:BASKET:*"
   puts "\tNum Baskets: #{keys.length}"
   count = 0
   keys = $redisdb.keys "SECURITIES:XREF:*"
@@ -73,6 +75,9 @@ if infile && File.exist?(infile)
     flush_db
   end
   
+  # update dtcc version
+  $redisdb.set "DTCC:VERSION", infile
+  
   baskets_a.each do |aBasket| 
     # create a new basket record
     $redisdb.hmset "DTCC:BASKET:#{aBasket.cusip}",
@@ -81,7 +86,7 @@ if infile && File.exist?(infile)
     					      "WhenIssuedIndicator", aBasket.whenIssuedIndicator,
     					      "ForeignIndicator", aBasket.foreignIndicator,
     					      "ExchangeIndicator", aBasket.exchangeIndicator,
-    					      "TradeDate", aBasket.tradeDate,
+    					      "PortfolioTradeDate", aBasket.tradeDate,
     					      "ComponentCount", aBasket.componentCount,
                     "CreationUnitsPerTrade", aBasket.creationUnitsPerTrade,
     					      "EstimatedT1CashAmountPerCreationUnit", aBasket.estimatedT1CashAmountPerCreationUnit,
