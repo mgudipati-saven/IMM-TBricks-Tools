@@ -36,7 +36,7 @@ keys.each do |key|
 end
 
 =begin rdoc
- * Name: etf-comps-report.rb
+ * Name: gen-dtcc-components-report.rb
  * Description: Converts DTCC file into csv files.
  * Author: Murthy Gudipati
  * Date: 12-Jul-2011

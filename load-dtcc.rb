@@ -33,14 +33,8 @@ def print_stats
   puts "\tVersion: #{ver}"
   keys = $redisdb.keys "DTCC:BASKET:*"
   puts "\tNum Baskets: #{keys.length}"
-  count = 0
-  keys = $redisdb.keys "SECURITIES:XREF:*"
-  keys.each do |aKey|
-    if $redisdb.hexists aKey, "DTCC"
-      count += 1
-    end
-  end
-  puts "\tNum DTCC Components: #{count}"
+  keys = $redisdb.keys "DTCC:COMPONENT:*"
+  puts "\tNum Components: #{keys.length}"
 end
 
 # flush the db records for keys DTCC:* and delete DTCC symbols from xref
@@ -61,6 +55,9 @@ end
 # Key => DTCC:BASKET:#{Index Receipt CUSIP}
 # Value => Hashtable {"IndexReceiptSymbol" => "SPY", "CreationUnit" => "50000", "Components" => json object of components hash}
 #
+# Key => DTCC:COMPONENT:#{CUSIP}
+# Value => Hashtable {"CUSIP" => "123456789", "Baskets" => json object of baskets hash}
+#
 # Key => SECURITIES:XREF:#{CUSIP}
 # Value => Hashtable {"CUSIP" => "123456789", "DTCC" => "IBM"}
 #
@@ -77,6 +74,9 @@ if infile && File.exist?(infile)
   
   # update dtcc version
   $redisdb.set "DTCC:VERSION", infile
+  
+  # components to baskets hash
+  c2b_h = Hash.new
   
   baskets_a.each do |aBasket| 
     # create a new basket record
@@ -105,19 +105,35 @@ if infile && File.exist?(infile)
                     
     # store the basket components
     if aBasket.components
-      hash = Hash.new
-      aBasket.components.each do |cusip, aComponent|
-        # cusip => share qty
-        hash[cusip] = aComponent.shareQuantity
+      components_h = Hash.new
+      aBasket.components.each do |ccusip, aComponent|
+        # component cusip => share qty
+        components_h[ccusip] = aComponent.shareQuantity
+        
+        # basket cusip => share qty
+        if !c2b_h.key?(ccusip)
+          c2b_h[ccusip] = Hash.new
+        end
+        c2b_h[ccusip][aBasket.cusip] = aComponent.shareQuantity
         
         # update securities cross-reference record for this component
         $redisdb.hmset "SECURITIES:XREF:#{aComponent.cusip}",
           "CUSIP", aComponent.cusip,
           "DTCC", aComponent.tickerSymbol        
       end
-      json = JSON.generate hash
+      
+      # Key => DTCC:BASKET:#{Index Receipt CUSIP}
+      # Value => Hashtable {"IndexReceiptSymbol" => "SPY", "CreationUnit" => "50000", "Components" => json object of components hash}
+      json = JSON.generate components_h
       $redisdb.hset "DTCC:BASKET:#{aBasket.cusip}", "Components", json
-    end                          
+    end                              
+  end
+
+  # Key => DTCC:COMPONENT:#{CUSIP}
+  # Value => Hashtable {"CUSIP" => "123456789", "Baskets" => json object of baskets hash}
+  c2b_h.each do |ccusip, hash|
+    json = JSON.generate hash
+    $redisdb.hmset "DTCC:COMPONENT:#{ccusip}", "CUSIP", ccusip, "Baskets", json
   end
 
   # report new stats
